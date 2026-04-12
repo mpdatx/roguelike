@@ -1,5 +1,6 @@
 import type { Entity, Enemy } from "./entities";
 import type { ActiveBuff, EffectiveStats } from "./items";
+import { getTheme } from "./themes";
 
 const MAX_MESSAGES = 50;
 const VISIBLE_MESSAGES = 4;
@@ -17,6 +18,7 @@ export class HUD {
   private minimapCtx: CanvasRenderingContext2D;
   private invButton: HTMLButtonElement;
   private toggleBtn: HTMLButtonElement;
+  private themeBtn: HTMLButtonElement;
 
   constructor(
     private mapWidth: number,
@@ -37,6 +39,7 @@ export class HUD {
           </div>
         </div>
         <div class="hud-right">
+          <button class="hud-theme-btn" title="Change theme">&#x1F30D;</button>
           <button class="hud-toggle-btn" title="Toggle view (t)">&#x1F3A8;</button>
           <button class="hud-inv-btn" title="Inventory (i)">&#x1F392;</button>
           <canvas class="hud-minimap"></canvas>
@@ -126,6 +129,7 @@ export class HUD {
       }
       .hud-buff.strength { color: #ff8844; border: 1px solid #ff8844; }
       .hud-buff.speed { color: #44ffff; border: 1px solid #44ffff; }
+      .hud-theme-btn,
       .hud-toggle-btn,
       .hud-inv-btn {
         pointer-events: auto;
@@ -143,6 +147,7 @@ export class HUD {
         padding: 0;
         line-height: 1;
       }
+      .hud-theme-btn:active,
       .hud-toggle-btn:active,
       .hud-inv-btn:active { background: #3a3a5c; }
       .hud-minimap {
@@ -171,6 +176,7 @@ export class HUD {
     this.messageLog = this.container.querySelector(".hud-messages")!;
     this.invButton = this.container.querySelector(".hud-inv-btn")!;
     this.toggleBtn = this.container.querySelector(".hud-toggle-btn")!;
+    this.themeBtn = this.container.querySelector(".hud-theme-btn")!;
     this.minimapCanvas = this.container.querySelector(".hud-minimap")!;
     this.minimapCanvas.width = mapWidth * MINIMAP_SCALE;
     this.minimapCanvas.height = mapHeight * MINIMAP_SCALE;
@@ -183,6 +189,10 @@ export class HUD {
 
   setToggleRendererCallback(cb: () => void) {
     this.toggleBtn.addEventListener("click", cb);
+  }
+
+  setThemeCallback(cb: () => void) {
+    this.themeBtn.addEventListener("click", cb);
   }
 
   updateHP(player: Entity, effectiveMaxHp: number) {
@@ -202,7 +212,10 @@ export class HUD {
 
   updateStats(stats: EffectiveStats, depth?: number) {
     let text = `ATK ${stats.attack}  DEF ${stats.defense}`;
-    if (depth !== undefined) text += `  LVL ${depth}`;
+    if (depth !== undefined) {
+      const noun = getTheme().text.levelNoun.toUpperCase().slice(0, 3);
+      text += `  ${noun} ${depth}`;
+    }
     this.statsText.textContent = text;
   }
 

@@ -1,5 +1,6 @@
 import * as ROT from "rot-js";
 import type { Room } from "rot-js/lib/map/features";
+import { getTheme } from "./themes";
 
 export interface Entity {
   x: number;
@@ -20,23 +21,10 @@ export interface Enemy extends Entity {
   confusedTurns: number;
 }
 
-interface EnemyTemplate {
-  name: string;
-  hp: number;
-  attack: number;
-  defense: number;
-  color: number;
-  behavior: BehaviorType;
-}
-
-const ENEMY_TEMPLATES: EnemyTemplate[] = [
-  { name: "Rat", hp: 3, attack: 1, defense: 0, color: 0x886644, behavior: "wander" },
-  { name: "Goblin", hp: 6, attack: 2, defense: 1, color: 0xff4444, behavior: "chase" },
-  { name: "Snake", hp: 4, attack: 3, defense: 0, color: 0x44ff44, behavior: "slow" },
-];
-
 export function createPlayer(x: number, y: number): Entity {
-  return { x, y, hp: 20, maxHp: 20, attack: 3, defense: 1, color: 0x00ff88, name: "Player" };
+  const theme = getTheme();
+  const playerColor = parseInt(theme.palette.player.replace("#", ""), 16);
+  return { x, y, hp: 20, maxHp: 20, attack: 3, defense: 1, color: playerColor, name: "Player" };
 }
 
 export function spawnEnemies(
@@ -45,13 +33,19 @@ export function spawnEnemies(
   rng: typeof ROT.RNG,
   depth: number = 1,
 ): Enemy[] {
+  const theme = getTheme();
   const enemies: Enemy[] = [];
-  // Scale: more enemies per room at deeper levels
   const maxPerRoom = Math.min(2 + Math.floor(depth / 3), 5);
-  // Stat bonus from depth
   const hpBonus = Math.floor((depth - 1) * 1.5);
   const atkBonus = Math.floor((depth - 1) * 0.5);
   const defBonus = Math.floor((depth - 1) * 0.3);
+
+  // Base stats per behavior type (same across themes)
+  const baseStats: Record<BehaviorType, { hp: number; attack: number; defense: number }> = {
+    wander: { hp: 3, attack: 1, defense: 0 },
+    chase: { hp: 6, attack: 2, defense: 1 },
+    slow: { hp: 4, attack: 3, defense: 0 },
+  };
 
   for (let i = 1; i < rooms.length; i++) {
     const room = rooms[i];
@@ -64,15 +58,16 @@ export function spawnEnemies(
       if (map.get(`${x},${y}`) !== 0) continue;
       if (enemies.some((e) => e.x === x && e.y === y)) continue;
 
-      const template = rng.getItem(ENEMY_TEMPLATES)!;
-      const hp = template.hp + hpBonus;
+      const template = rng.getItem(theme.enemies)!;
+      const stats = baseStats[template.behavior];
+      const hp = stats.hp + hpBonus;
       enemies.push({
         x,
         y,
         hp,
         maxHp: hp,
-        attack: template.attack + atkBonus,
-        defense: template.defense + defBonus,
+        attack: stats.attack + atkBonus,
+        defense: stats.defense + defBonus,
         color: template.color,
         name: template.name,
         behavior: template.behavior,

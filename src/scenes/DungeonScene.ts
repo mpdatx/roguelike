@@ -8,6 +8,7 @@ import { HUD } from "../hud";
 import { InventoryPanel } from "../inventoryPanel";
 import { AsciiRenderer, type GameRenderer } from "../renderer";
 import { TilesetRenderer } from "../tilesetRenderer";
+import { getTheme, setTheme, getThemeList } from "../themes";
 
 interface Stairs {
   x: number;
@@ -97,7 +98,7 @@ export class DungeonScene extends Phaser.Scene {
     this.depth = 1;
     this.inventory.reset();
     this.hud.clearMessages();
-    this.hud.addMessage("You descend into the dungeon...");
+    this.hud.addMessage(getTheme().text.descend);
 
     this.generateLevel(true);
     this.startLevel();
@@ -106,7 +107,7 @@ export class DungeonScene extends Phaser.Scene {
   private descend() {
     this.turnEngine.stop();
     this.depth++;
-    this.hud.addMessage(`You descend to level ${this.depth}...`);
+    this.hud.addMessage(getTheme().text.descendLevel(this.depth));
     this.generateLevel(false);
     this.startLevel();
   }
@@ -176,6 +177,7 @@ export class DungeonScene extends Phaser.Scene {
     );
     this.hud.setInventoryCallback(() => this.inventoryPanel.open());
     this.hud.setToggleRendererCallback(() => this.toggleRenderer());
+    this.hud.setThemeCallback(() => this.cycleTheme());
 
     this.turnEngine = new TurnEngine(
       this.player,
@@ -232,6 +234,16 @@ export class DungeonScene extends Phaser.Scene {
     this.activeRenderer = this.useTileset ? this.tilesetRenderer : this.asciiRenderer;
     this.renderAll();
     this.centerCameraOnPlayer();
+  }
+
+  private cycleTheme() {
+    const themes = getThemeList();
+    const currentId = getTheme().id;
+    const idx = themes.findIndex((t) => t.id === currentId);
+    const next = themes[(idx + 1) % themes.length];
+    setTheme(next.id);
+    this.turnEngine.stop();
+    this.startNewGame();
   }
 
   private renderAll() {
@@ -339,7 +351,7 @@ export class DungeonScene extends Phaser.Scene {
 
   private showGameOver() {
     this.gameOver = true;
-    this.gameOverText.setText(`GAME OVER\n\nReached level ${this.depth}\n\nTap to restart`);
+    this.gameOverText.setText(getTheme().text.gameOver(this.depth));
     this.gameOverText.setVisible(true);
     this.positionGameOverText();
   }

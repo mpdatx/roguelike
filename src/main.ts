@@ -1,5 +1,8 @@
 import * as Phaser from "phaser";
 import { DungeonScene } from "./scenes/DungeonScene";
+import { initThemes } from "./themes";
+
+initThemes();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
