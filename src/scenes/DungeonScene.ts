@@ -6,7 +6,8 @@ import { Inventory } from "../inventory";
 import { TurnEngine } from "../turnEngine";
 import { HUD } from "../hud";
 import { InventoryPanel } from "../inventoryPanel";
-import { AsciiRenderer, TILE_SIZE } from "../renderer";
+import { AsciiRenderer, type GameRenderer } from "../renderer";
+import { TilesetRenderer } from "../tilesetRenderer";
 
 interface Stairs {
   x: number;
@@ -34,6 +35,9 @@ export class DungeonScene extends Phaser.Scene {
   private hud!: HUD;
   private inventoryPanel!: InventoryPanel;
   private asciiRenderer!: AsciiRenderer;
+  private tilesetRenderer!: TilesetRenderer;
+  private activeRenderer!: GameRenderer;
+  private useTileset = false;
   private mapImage!: Phaser.GameObjects.Image;
   private mapTextureKey = "mapTexture";
 
@@ -43,9 +47,10 @@ export class DungeonScene extends Phaser.Scene {
 
   create() {
     this.asciiRenderer = new AsciiRenderer(this.mapWidth, this.mapHeight);
+    this.tilesetRenderer = new TilesetRenderer(this.mapWidth, this.mapHeight);
+    this.activeRenderer = this.asciiRenderer;
 
-    // Create initial texture from the offscreen canvas
-    this.textures.addCanvas(this.mapTextureKey, this.asciiRenderer.getCanvas());
+    this.textures.addCanvas(this.mapTextureKey, this.activeRenderer.getCanvas());
     this.mapImage = this.add.image(0, 0, this.mapTextureKey).setOrigin(0, 0);
 
     this.gameOverText = this.add.text(0, 0, "", {
@@ -170,6 +175,7 @@ export class DungeonScene extends Phaser.Scene {
       () => this.rng,
     );
     this.hud.setInventoryCallback(() => this.inventoryPanel.open());
+    this.hud.setToggleRendererCallback(() => this.toggleRenderer());
 
     this.turnEngine = new TurnEngine(
       this.player,
@@ -221,8 +227,15 @@ export class DungeonScene extends Phaser.Scene {
     });
   }
 
+  private toggleRenderer() {
+    this.useTileset = !this.useTileset;
+    this.activeRenderer = this.useTileset ? this.tilesetRenderer : this.asciiRenderer;
+    this.renderAll();
+    this.centerCameraOnPlayer();
+  }
+
   private renderAll() {
-    this.asciiRenderer.render({
+    this.activeRenderer.render({
       map: this.map,
       mapWidth: this.mapWidth,
       mapHeight: this.mapHeight,
@@ -237,7 +250,7 @@ export class DungeonScene extends Phaser.Scene {
 
     // Update the Phaser texture from the offscreen canvas
     this.textures.remove(this.mapTextureKey);
-    this.textures.addCanvas(this.mapTextureKey, this.asciiRenderer.getCanvas());
+    this.textures.addCanvas(this.mapTextureKey, this.activeRenderer.getCanvas());
     this.mapImage.setTexture(this.mapTextureKey);
   }
 
@@ -250,15 +263,17 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private centerCameraOnPlayer() {
-    this.camera.scrollX = this.player.x * TILE_SIZE - this.scale.width / 2;
-    this.camera.scrollY = this.player.y * TILE_SIZE - this.scale.height / 2;
+    const ts = this.activeRenderer.getTileSize();
+    this.camera.scrollX = this.player.x * ts - this.scale.width / 2;
+    this.camera.scrollY = this.player.y * ts - this.scale.height / 2;
   }
 
   private handleTap(pointer: Phaser.Input.Pointer) {
     if (!this.turnEngine.isWaitingForInput()) return;
 
-    const tileX = Math.floor(pointer.worldX / TILE_SIZE);
-    const tileY = Math.floor(pointer.worldY / TILE_SIZE);
+    const ts = this.activeRenderer.getTileSize();
+    const tileX = Math.floor(pointer.worldX / ts);
+    const tileY = Math.floor(pointer.worldY / ts);
     const dx = tileX - this.player.x;
     const dy = tileY - this.player.y;
 
@@ -289,6 +304,10 @@ export class DungeonScene extends Phaser.Scene {
 
     if (key === "i") {
       this.inventoryPanel.open();
+      return;
+    }
+    if (key === "t") {
+      this.toggleRenderer();
       return;
     }
 

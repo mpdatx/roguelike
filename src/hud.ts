@@ -16,6 +16,7 @@ export class HUD {
   private minimapCanvas: HTMLCanvasElement;
   private minimapCtx: CanvasRenderingContext2D;
   private invButton: HTMLButtonElement;
+  private toggleBtn: HTMLButtonElement;
 
   constructor(
     private mapWidth: number,
@@ -36,6 +37,7 @@ export class HUD {
           </div>
         </div>
         <div class="hud-right">
+          <button class="hud-toggle-btn" title="Toggle view (t)">&#x1F3A8;</button>
           <button class="hud-inv-btn" title="Inventory (i)">&#x1F392;</button>
           <canvas class="hud-minimap"></canvas>
         </div>
@@ -124,6 +126,7 @@ export class HUD {
       }
       .hud-buff.strength { color: #ff8844; border: 1px solid #ff8844; }
       .hud-buff.speed { color: #44ffff; border: 1px solid #44ffff; }
+      .hud-toggle-btn,
       .hud-inv-btn {
         pointer-events: auto;
         background: #2a2a4a;
@@ -140,6 +143,7 @@ export class HUD {
         padding: 0;
         line-height: 1;
       }
+      .hud-toggle-btn:active,
       .hud-inv-btn:active { background: #3a3a5c; }
       .hud-minimap {
         border: 1px solid #3a3a5c;
@@ -166,6 +170,7 @@ export class HUD {
     this.buffsContainer = this.container.querySelector(".hud-buffs")!;
     this.messageLog = this.container.querySelector(".hud-messages")!;
     this.invButton = this.container.querySelector(".hud-inv-btn")!;
+    this.toggleBtn = this.container.querySelector(".hud-toggle-btn")!;
     this.minimapCanvas = this.container.querySelector(".hud-minimap")!;
     this.minimapCanvas.width = mapWidth * MINIMAP_SCALE;
     this.minimapCanvas.height = mapHeight * MINIMAP_SCALE;
@@ -174,6 +179,10 @@ export class HUD {
 
   setInventoryCallback(cb: () => void) {
     this.invButton.addEventListener("click", cb);
+  }
+
+  setToggleRendererCallback(cb: () => void) {
+    this.toggleBtn.addEventListener("click", cb);
   }
 
   updateHP(player: Entity, effectiveMaxHp: number) {

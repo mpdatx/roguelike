@@ -77,7 +77,13 @@ export interface RenderState {
   stairs: { x: number; y: number } | null;
 }
 
-export class AsciiRenderer {
+export interface GameRenderer {
+  render(state: RenderState): HTMLCanvasElement;
+  getCanvas(): HTMLCanvasElement;
+  getTileSize(): number;
+}
+
+export class AsciiRenderer implements GameRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
 
@@ -215,6 +221,10 @@ export class AsciiRenderer {
 
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
+  }
+
+  getTileSize(): number {
+    return TILE_SIZE;
   }
 }
 
