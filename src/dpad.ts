@@ -98,7 +98,7 @@ export class DPad {
         font-size: 22px;
         color: #ccc;
       }
-      @media (min-width: 768px) {
+      @media (hover: hover) and (pointer: fine) {
         #dpad { display: none; }
       }
     `;
