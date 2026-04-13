@@ -1,6 +1,6 @@
 import type { Entity, Enemy } from "./entities";
 import type { GroundItem } from "./items";
-import { getTemplate, isEquipSlot, type EquipSlot } from "./items";
+import { getTemplate, getEffectiveStats, isEquipSlot, type EquipSlot } from "./items";
 import type { Inventory } from "./inventory";
 
 export class InventoryPanel {
@@ -147,6 +147,13 @@ export class InventoryPanel {
         min-height: 32px;
       }
       .inv-actions button:active { background: #3a3a5c; }
+      .inv-stats-summary {
+        padding: 6px 16px;
+        font-size: 11px;
+        color: #aaa;
+        border-bottom: 1px solid #2a2a4a;
+        line-height: 1.6;
+      }
       .inv-footer {
         padding: 8px 16px;
         font-size: 11px;
@@ -206,6 +213,24 @@ export class InventoryPanel {
           <div><span class="slot-label">${label}:</span> <span class="slot-empty">Empty</span></div>
         </div>`;
       }
+    }
+
+    // Equipment stats summary
+    const stats = getEffectiveStats(this.getPlayer(), inv.equipment, inv.buffs);
+    const player = this.getPlayer();
+    const parts: string[] = [];
+    if (stats.attack !== player.attack) parts.push(`ATK ${player.attack}+<span style="color:#ff8844">${stats.attack - player.attack}</span>=${stats.attack}`);
+    if (stats.defense !== player.defense) parts.push(`DEF ${player.defense}+<span style="color:#4488ff">${stats.defense - player.defense}</span>=${stats.defense}`);
+    if (stats.maxHp !== player.maxHp) parts.push(`HP +<span style="color:#ff4488">${stats.maxHp - player.maxHp}</span>`);
+    if (stats.fovRange !== 8) parts.push(`FOV +<span style="color:#44ffff">${stats.fovRange - 8}</span>`);
+    // Special effects
+    if (inv.hasLifesteal()) parts.push(`<span style="color:#cc2244">Lifesteal</span>`);
+    if (inv.getThorns() > 0) parts.push(`<span style="color:#66aa44">Thorns ${inv.getThorns()}</span>`);
+    if (inv.getBlockChance() > 0) parts.push(`<span style="color:#8899aa">Block ${Math.round(inv.getBlockChance() * 100)}%</span>`);
+    if (inv.getBlinkChance() > 0) parts.push(`<span style="color:#aa88ff">Blink ${Math.round(inv.getBlinkChance() * 100)}%</span>`);
+    if (inv.getEquipRegenRate() > 0) parts.push(`<span style="color:#44ff88">Regen 1/${inv.getEquipRegenRate()}t</span>`);
+    if (parts.length > 0) {
+      html += `<div class="inv-stats-summary">${parts.join(" &middot; ")}</div>`;
     }
 
     // Active buffs
