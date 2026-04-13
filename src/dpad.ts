@@ -49,6 +49,7 @@ export class DPad {
       btn.addEventListener("pointerup", () => this.stopRepeat());
       btn.addEventListener("pointercancel", () => this.stopRepeat());
       btn.addEventListener("pointerleave", () => this.stopRepeat());
+      btn.addEventListener("contextmenu", (e) => e.preventDefault());
 
       this.container.appendChild(btn);
     }
@@ -57,7 +58,7 @@ export class DPad {
     style.textContent = `
       #dpad {
         position: fixed;
-        bottom: 90px;
+        bottom: calc(110px + env(safe-area-inset-bottom, 0px));
         left: 12px;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -83,6 +84,7 @@ export class DPad {
         padding: 0;
         line-height: 1;
         -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
       }
       .dpad-btn:active, .dpad-btn.active {
         background: rgba(60, 60, 100, 0.9);
