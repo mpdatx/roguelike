@@ -19,6 +19,7 @@ export interface Enemy extends Entity {
   behavior: BehaviorType;
   turnParity: number;
   confusedTurns: number;
+  fleeingTurns: number;
 }
 
 export function createPlayer(x: number, y: number): Entity {
@@ -73,6 +74,7 @@ export function spawnEnemies(
         behavior: template.behavior,
         turnParity: 0,
         confusedTurns: 0,
+        fleeingTurns: 0,
       });
     }
   }

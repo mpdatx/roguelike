@@ -4,8 +4,8 @@ import type { Entity, Enemy } from "./entities";
 import { getTheme } from "./themes";
 
 export type ItemCategory = "potion" | "scroll" | "weapon" | "armor" | "ring";
-export type ScrollEffect = "lightning" | "confusion" | "mapping" | "teleportation";
-export type BuffType = "strength" | "speed";
+export type ScrollEffect = "lightning" | "confusion" | "mapping" | "teleportation" | "fireball" | "fear" | "enchant";
+export type BuffType = "strength" | "speed" | "regen" | "invisibility";
 
 export interface ItemTemplate {
   id: string;
@@ -23,6 +23,11 @@ export interface ItemTemplate {
   defenseBonus?: number;
   maxHpBonus?: number;
   fovBonus?: number;
+  lifesteal?: boolean;
+  thorns?: number;
+  blockChance?: number;
+  regenRate?: number;     // heal 1 HP every N turns
+  blinkChance?: number;   // chance to teleport when hit
 }
 
 export interface GroundItem {
@@ -69,6 +74,22 @@ const BASE_TEMPLATES: ItemTemplate[] = [
   { id: "ring_vitality", name: "", category: "ring", color: 0, description: "", weight: 3, maxHpBonus: 5 },
   { id: "ring_sight", name: "", category: "ring", color: 0, description: "", weight: 3, fovBonus: 3 },
   { id: "ring_protection", name: "", category: "ring", color: 0, description: "", weight: 3, defenseBonus: 1 },
+  // New consumables
+  { id: "regen_potion", name: "", category: "potion", color: 0, description: "", weight: 3, buffType: "regen", buffDuration: 15, buffAmount: 1 },
+  { id: "invisibility_potion", name: "", category: "potion", color: 0, description: "", weight: 2, buffType: "invisibility", buffDuration: 8, buffAmount: 1 },
+  { id: "scroll_fireball", name: "", category: "scroll", color: 0, description: "", weight: 3, scrollEffect: "fireball" },
+  { id: "scroll_fear", name: "", category: "scroll", color: 0, description: "", weight: 2, scrollEffect: "fear" },
+  { id: "scroll_enchant", name: "", category: "scroll", color: 0, description: "", weight: 1, scrollEffect: "enchant" },
+  // New weapons
+  { id: "spear", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2 },
+  { id: "war_hammer", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3 },
+  { id: "vampiric_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 2, lifesteal: true },
+  // New armor
+  { id: "thorned_armor", name: "", category: "armor", color: 0, description: "", weight: 2, defenseBonus: 1, thorns: 1 },
+  { id: "shield_armor", name: "", category: "armor", color: 0, description: "", weight: 3, defenseBonus: 1, blockChance: 0.25 },
+  // New rings
+  { id: "ring_regen", name: "", category: "ring", color: 0, description: "", weight: 2, regenRate: 5 },
+  { id: "ring_blink", name: "", category: "ring", color: 0, description: "", weight: 2, blinkChance: 0.1 },
 ];
 
 const baseMap = new Map<string, ItemTemplate>();

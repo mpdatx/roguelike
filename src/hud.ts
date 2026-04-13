@@ -129,6 +129,8 @@ export class HUD {
       }
       .hud-buff.strength { color: #ff8844; border: 1px solid #ff8844; }
       .hud-buff.speed { color: #44ffff; border: 1px solid #44ffff; }
+      .hud-buff.regen { color: #44ff44; border: 1px solid #44ff44; }
+      .hud-buff.invisibility { color: #aa88ff; border: 1px solid #aa88ff; }
       .hud-theme-btn,
       .hud-toggle-btn,
       .hud-inv-btn {
@@ -220,8 +222,14 @@ export class HUD {
   }
 
   updateBuffs(buffs: ActiveBuff[]) {
+    const labels: Record<string, string> = {
+      strength: "STR",
+      speed: "SPD",
+      regen: "RGN",
+      invisibility: "INV",
+    };
     this.buffsContainer.innerHTML = buffs.map((b) => {
-      const label = b.type === "strength" ? `STR+${b.amount}` : `SPD`;
+      const label = labels[b.type] ?? b.type;
       return `<span class="hud-buff ${b.type}">${label} ${b.turnsRemaining}t</span>`;
     }).join("");
   }

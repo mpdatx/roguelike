@@ -58,6 +58,18 @@ export const dungeonTheme: ThemeDefinition = {
     { id: "ring_vitality", name: "Ring of Vitality", description: "+5 Max HP", color: 0xff4488 },
     { id: "ring_sight", name: "Ring of Sight", description: "+3 FOV range", color: 0x44ffff },
     { id: "ring_protection", name: "Ring of Protection", description: "+1 Defense", color: 0x88aaff },
+    { id: "regen_potion", name: "Potion of Regeneration", description: "Regen 1 HP/turn for 15 turns", color: 0x44ff88 },
+    { id: "invisibility_potion", name: "Potion of Invisibility", description: "Invisible for 8 turns", color: 0xaa88ff },
+    { id: "scroll_fireball", name: "Scroll of Fireball", description: "5 damage to all visible enemies", color: 0xff6622 },
+    { id: "scroll_fear", name: "Scroll of Fear", description: "All visible enemies flee", color: 0xcc44cc },
+    { id: "scroll_enchant", name: "Scroll of Enchantment", description: "Upgrade equipped weapon", color: 0xffdd88 },
+    { id: "spear", name: "Spear", description: "+2 Attack", color: 0xbbbbbb },
+    { id: "war_hammer", name: "War Hammer", description: "+3 Attack", color: 0xccbbaa },
+    { id: "vampiric_blade", name: "Vampiric Blade", description: "+2 Attack, lifesteal", color: 0xcc2244 },
+    { id: "thorned_armor", name: "Thorned Armor", description: "+1 Def, reflect 1 dmg", color: 0x66aa44 },
+    { id: "shield_armor", name: "Kite Shield", description: "+1 Def, 25% block", color: 0x8899aa },
+    { id: "ring_regen", name: "Ring of Regeneration", description: "Heal 1 HP every 5 turns", color: 0x44ff88 },
+    { id: "ring_blink", name: "Ring of Blinking", description: "10% blink when hit", color: 0xaa88ff },
   ],
 
   text: {

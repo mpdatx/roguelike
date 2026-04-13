@@ -58,6 +58,18 @@ export const spaceStationTheme: ThemeDefinition = {
     { id: "ring_vitality", name: "Vitality Implant", description: "+5 Max HP", color: 0xff4488 },
     { id: "ring_sight", name: "Thermal Visor", description: "+3 FOV range", color: 0x44ffff },
     { id: "ring_protection", name: "Shield Module", description: "+1 Defense", color: 0x88aaff },
+    { id: "regen_potion", name: "Nano-Med Injector", description: "Regen 1 HP/turn for 15 turns", color: 0x44ff88 },
+    { id: "invisibility_potion", name: "Cloaking Device", description: "Invisible for 8 turns", color: 0xaa88ff },
+    { id: "scroll_fireball", name: "Incendiary Grenade", description: "5 damage to all visible enemies", color: 0xff6622 },
+    { id: "scroll_fear", name: "Sonic Disruptor", description: "All visible enemies flee", color: 0xcc44cc },
+    { id: "scroll_enchant", name: "Weapon Mod Kit", description: "Upgrade equipped weapon", color: 0xffdd88 },
+    { id: "spear", name: "Shock Prod", description: "+2 Attack", color: 0x44ccff },
+    { id: "war_hammer", name: "Power Maul", description: "+3 Attack", color: 0xccbbaa },
+    { id: "vampiric_blade", name: "Neuro-Drain Blade", description: "+2 Attack, lifesteal", color: 0xcc2244 },
+    { id: "thorned_armor", name: "Reactive Plating", description: "+1 Def, reflect 1 dmg", color: 0x66aa44 },
+    { id: "shield_armor", name: "Riot Shield", description: "+1 Def, 25% block", color: 0x8899aa },
+    { id: "ring_regen", name: "Bio-Repair Module", description: "Heal 1 HP every 5 turns", color: 0x44ff88 },
+    { id: "ring_blink", name: "Phase Shift Module", description: "10% blink when hit", color: 0xaa88ff },
   ],
 
   text: {

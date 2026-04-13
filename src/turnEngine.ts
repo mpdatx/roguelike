@@ -47,10 +47,9 @@ export class TurnEngine {
         if (!this.running) break;
         this.resolveMove(this.player, move.dx, move.dy);
         this.tryPickup();
-        this.inventory.tickBuffs();
+        this.inventory.tickBuffs(this.player, this.onMessage);
         this.turnNumber++;
 
-        // Speed buff: grant an extra action
         if (this.inventory.hasSpeedBuff()) {
           this.onTurnProcessed();
           if (this.player.hp <= 0) { this.running = false; this.onPlayerDied(); break; }
@@ -65,10 +64,9 @@ export class TurnEngine {
           this.scheduler.remove(actor);
           continue;
         }
-        // Decrement confusion
-        if (enemy.confusedTurns > 0) {
-          enemy.confusedTurns--;
-        }
+        if (enemy.confusedTurns > 0) enemy.confusedTurns--;
+        if (enemy.fleeingTurns > 0) enemy.fleeingTurns--;
+
         const move = getEnemyMove(
           enemy,
           this.player,
@@ -76,6 +74,7 @@ export class TurnEngine {
           (x, y) => this.isPassable(x, y),
           this.turnNumber,
           this.rng,
+          this.inventory.hasInvisibility(),
         );
         if (move) {
           this.resolveMove(enemy, move.dx, move.dy);
@@ -140,19 +139,57 @@ export class TurnEngine {
   }
 
   private resolveCombat(attacker: Entity, defender: Entity) {
-    const attackerStats = attacker === this.player
+    const isPlayerAttacking = attacker === this.player;
+    const isPlayerDefending = defender === this.player;
+
+    const attackerStats = isPlayerAttacking
       ? getEffectiveStats(this.player, this.inventory.equipment, this.inventory.buffs)
       : { attack: attacker.attack, defense: attacker.defense, maxHp: attacker.maxHp, fovRange: 8 };
 
-    const defenderStats = defender === this.player
+    const defenderStats = isPlayerDefending
       ? getEffectiveStats(this.player, this.inventory.equipment, this.inventory.buffs)
       : { attack: defender.attack, defense: defender.defense, maxHp: defender.maxHp, fovRange: 8 };
+
+    // Block chance (player defending with shield)
+    if (isPlayerDefending) {
+      const blockChance = this.inventory.getBlockChance();
+      if (blockChance > 0 && this.rng.getUniform() < blockChance) {
+        this.onMessage(`You block ${attacker.name}'s attack!`);
+        return;
+      }
+
+      // Blink chance (ring of teleportation)
+      const blinkChance = this.inventory.getBlinkChance();
+      if (blinkChance > 0 && this.rng.getUniform() < blinkChance) {
+        this.blinkPlayer();
+        this.onMessage("You blink away from danger!");
+        return;
+      }
+    }
 
     const damage = Math.max(1, attackerStats.attack - defenderStats.defense);
     defender.hp -= damage;
     this.onMessage(`${attacker.name} hits ${defender.name} for ${damage} damage.`);
 
-    if (defender.hp <= 0 && defender !== this.player) {
+    // Lifesteal (player attacking with vampiric weapon)
+    if (isPlayerAttacking && this.inventory.hasLifesteal()) {
+      const healed = Math.min(1, attackerStats.maxHp - attacker.hp);
+      if (healed > 0) {
+        attacker.hp += healed;
+        this.onMessage("You drain life from the enemy!");
+      }
+    }
+
+    // Thorns (player defending with thorned armor)
+    if (isPlayerDefending) {
+      const thorns = this.inventory.getThorns();
+      if (thorns > 0) {
+        attacker.hp -= thorns;
+        this.onMessage(`Thorns deal ${thorns} damage to ${attacker.name}!`);
+      }
+    }
+
+    if (defender.hp <= 0 && !isPlayerDefending) {
       const enemy = defender as Enemy;
       const idx = this.enemies.indexOf(enemy);
       if (idx !== -1) {
@@ -160,6 +197,37 @@ export class TurnEngine {
       }
       this.onMessage(`${enemy.name} dies!`);
       this.onEnemyKilled(enemy);
+    }
+
+    // Check if thorns killed the attacker
+    if (attacker.hp <= 0 && !isPlayerAttacking) {
+      const enemy = attacker as Enemy;
+      const idx = this.enemies.indexOf(enemy);
+      if (idx !== -1) {
+        this.enemies.splice(idx, 1);
+      }
+      this.onMessage(`${enemy.name} dies from thorns!`);
+      this.onEnemyKilled(enemy);
+    }
+  }
+
+  private blinkPlayer() {
+    const floors: { x: number; y: number }[] = [];
+    for (const [key, value] of this.map) {
+      if (value !== 0) continue;
+      const [sx, sy] = key.split(",");
+      const x = parseInt(sx);
+      const y = parseInt(sy);
+      // Blink to a nearby floor tile (within 5)
+      const dist = Math.hypot(x - this.player.x, y - this.player.y);
+      if (dist < 2 || dist > 5) continue;
+      if (this.enemies.some((e) => e.x === x && e.y === y)) continue;
+      floors.push({ x, y });
+    }
+    if (floors.length > 0) {
+      const dest = floors[Math.floor(this.rng.getUniform() * floors.length)];
+      this.player.x = dest.x;
+      this.player.y = dest.y;
     }
   }
 

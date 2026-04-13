@@ -15,6 +15,7 @@ export class Inventory {
   items: InventoryItem[] = [];
   equipment: Equipment = { weapon: null, armor: null, ring: null };
   buffs: ActiveBuff[] = [];
+  private regenCounter = 0;
 
   get isFull(): boolean {
     return this.items.length >= MAX_SLOTS;
@@ -135,11 +136,27 @@ export class Inventory {
     return true;
   }
 
-  tickBuffs() {
+  tickBuffs(player: Entity, onMessage: (msg: string) => void) {
     for (let i = this.buffs.length - 1; i >= 0; i--) {
-      this.buffs[i].turnsRemaining--;
-      if (this.buffs[i].turnsRemaining <= 0) {
+      const buff = this.buffs[i];
+      // Regen heals 1 HP per turn
+      if (buff.type === "regen" && player.hp < player.maxHp) {
+        player.hp = Math.min(player.maxHp, player.hp + 1);
+        onMessage("You regenerate 1 HP.");
+      }
+      buff.turnsRemaining--;
+      if (buff.turnsRemaining <= 0) {
         this.buffs.splice(i, 1);
+      }
+    }
+    // Ring of Regeneration passive
+    const regenRate = this.getEquipRegenRate();
+    if (regenRate > 0) {
+      // Track via a simple turn counter embedded in the class
+      this.regenCounter++;
+      if (this.regenCounter >= regenRate && player.hp < player.maxHp) {
+        player.hp = Math.min(player.maxHp, player.hp + 1);
+        this.regenCounter = 0;
       }
     }
   }
@@ -148,10 +165,44 @@ export class Inventory {
     return this.buffs.some((b) => b.type === "speed");
   }
 
+  hasInvisibility(): boolean {
+    return this.buffs.some((b) => b.type === "invisibility");
+  }
+
   reset() {
     this.items = [];
     this.equipment = { weapon: null, armor: null, ring: null };
     this.buffs = [];
+    this.regenCounter = 0;
+  }
+
+  getEquipRegenRate(): number {
+    for (const slot of [this.equipment.weapon, this.equipment.armor, this.equipment.ring]) {
+      if (!slot) continue;
+      const t = getTemplate(slot.templateId);
+      if (t.regenRate) return t.regenRate;
+    }
+    return 0;
+  }
+
+  hasLifesteal(): boolean {
+    const w = this.equipment.weapon;
+    return w ? (getTemplate(w.templateId).lifesteal ?? false) : false;
+  }
+
+  getThorns(): number {
+    const a = this.equipment.armor;
+    return a ? (getTemplate(a.templateId).thorns ?? 0) : 0;
+  }
+
+  getBlockChance(): number {
+    const a = this.equipment.armor;
+    return a ? (getTemplate(a.templateId).blockChance ?? 0) : 0;
+  }
+
+  getBlinkChance(): number {
+    const r = this.equipment.ring;
+    return r ? (getTemplate(r.templateId).blinkChance ?? 0) : 0;
   }
 
   private usePotion(
@@ -272,6 +323,72 @@ export class Inventory {
         player.y = dest.y;
         this.items.splice(index, 1);
         onMessage("You teleport to a new location!");
+        return true;
+      }
+
+      case "fireball": {
+        let killed = 0;
+        let hit = 0;
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i];
+          if (!fov.has(`${enemy.x},${enemy.y}`)) continue;
+          enemy.hp -= 5;
+          hit++;
+          if (enemy.hp <= 0) {
+            enemies.splice(i, 1);
+            killed++;
+          }
+        }
+        this.items.splice(index, 1);
+        if (hit > 0) {
+          onMessage(`Fireball hits ${hit} enemies for 5 damage each!${killed > 0 ? ` ${killed} killed!` : ""}`);
+        } else {
+          onMessage("No visible enemies to hit.");
+        }
+        return true;
+      }
+
+      case "fear": {
+        let count = 0;
+        for (const enemy of enemies) {
+          if (fov.has(`${enemy.x},${enemy.y}`)) {
+            enemy.fleeingTurns = 8;
+            count++;
+          }
+        }
+        this.items.splice(index, 1);
+        if (count > 0) {
+          onMessage(`${count} enemies flee in terror!`);
+        } else {
+          onMessage("No visible enemies to frighten.");
+        }
+        return true;
+      }
+
+      case "enchant": {
+        const weapon = this.equipment.weapon;
+        if (!weapon) {
+          onMessage("No weapon equipped to enchant.");
+          return false;
+        }
+        // We can't modify the template, so we swap to the next tier weapon
+        const upgrades: Record<string, string> = {
+          dagger: "sword",
+          spear: "sword",
+          sword: "battle_axe",
+          war_hammer: "enchanted_blade",
+          battle_axe: "enchanted_blade",
+          vampiric_blade: "enchanted_blade",
+        };
+        const nextId = upgrades[weapon.templateId];
+        if (!nextId) {
+          onMessage("This weapon cannot be further enchanted.");
+          return false;
+        }
+        this.equipment.weapon = { templateId: nextId };
+        this.items.splice(index, 1);
+        const newName = getTemplate(nextId).name;
+        onMessage(`Your weapon glows! It becomes a ${newName}!`);
         return true;
       }
 
