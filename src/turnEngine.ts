@@ -39,48 +39,70 @@ export class TurnEngine {
 
   async run() {
     while (this.running) {
-      const actor = this.scheduler.next() as Actor | null;
+      // --- Player turn ---
+      // Advance scheduler until we hit the player
+      let actor: Actor | null;
+      do {
+        actor = this.scheduler.next() as Actor | null;
+      } while (actor && actor.type !== "player");
       if (!actor) break;
 
-      if (actor.type === "player") {
-        const move = await this.waitForPlayerInput();
-        if (!this.running) break;
-        this.resolveMove(this.player, move.dx, move.dy);
-        this.tryPickup();
-        this.inventory.tickBuffs(this.player, this.onMessage);
-        this.turnNumber++;
+      const move = await this.waitForPlayerInput();
+      if (!this.running) break;
+      this.resolveMove(this.player, move.dx, move.dy);
+      this.tryPickup();
+      this.inventory.tickBuffs(this.player, this.onMessage);
+      this.turnNumber++;
 
-        if (this.inventory.hasSpeedBuff()) {
-          this.onTurnProcessed();
-          if (this.player.hp <= 0) { this.running = false; this.onPlayerDied(); break; }
-          const extra = await this.waitForPlayerInput();
-          if (!this.running) break;
-          this.resolveMove(this.player, extra.dx, extra.dy);
-          this.tryPickup();
-        }
-      } else {
-        const enemy = actor.entity as Enemy;
+      // Speed buff: extra action with a render in between
+      if (this.inventory.hasSpeedBuff()) {
+        this.onTurnProcessed();
+        if (this.player.hp <= 0) { this.running = false; this.onPlayerDied(); break; }
+        const extra = await this.waitForPlayerInput();
+        if (!this.running) break;
+        this.resolveMove(this.player, extra.dx, extra.dy);
+        this.tryPickup();
+      }
+
+      if (this.player.hp <= 0) { this.running = false; this.onPlayerDied(); break; }
+
+      // --- All enemy turns (batched, single render after) ---
+      const invisible = this.inventory.hasInvisibility();
+      const deadActors: Actor[] = [];
+
+      // Process all enemies until we cycle back to the player
+      while (true) {
+        const next = this.scheduler.next() as Actor | null;
+        if (!next || next.type === "player") break;
+
+        const enemy = next.entity as Enemy;
         if (enemy.hp <= 0) {
-          this.scheduler.remove(actor);
+          deadActors.push(next);
           continue;
         }
         if (enemy.confusedTurns > 0) enemy.confusedTurns--;
         if (enemy.fleeingTurns > 0) enemy.fleeingTurns--;
 
-        const move = getEnemyMove(
+        const enemyMove = getEnemyMove(
           enemy,
           this.player,
           (x, y) => this.isTransparent(x, y),
           (x, y) => this.isPassable(x, y),
           this.turnNumber,
           this.rng,
-          this.inventory.hasInvisibility(),
+          invisible,
         );
-        if (move) {
-          this.resolveMove(enemy, move.dx, move.dy);
+        if (enemyMove) {
+          this.resolveMove(enemy, enemyMove.dx, enemyMove.dy);
         }
       }
 
+      // Clean up dead actors
+      for (const dead of deadActors) {
+        this.scheduler.remove(dead);
+      }
+
+      // Single render for the entire round
       this.onTurnProcessed();
 
       if (this.player.hp <= 0) {

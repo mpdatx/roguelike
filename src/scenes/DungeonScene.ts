@@ -232,6 +232,10 @@ export class DungeonScene extends Phaser.Scene {
   private toggleRenderer() {
     this.useTileset = !this.useTileset;
     this.activeRenderer = this.useTileset ? this.tilesetRenderer : this.asciiRenderer;
+    // Swap the canvas source in Phaser
+    this.textures.remove(this.mapTextureKey);
+    this.textures.addCanvas(this.mapTextureKey, this.activeRenderer.getCanvas());
+    this.mapImage.setTexture(this.mapTextureKey);
     this.renderAll();
     this.centerCameraOnPlayer();
   }
@@ -260,10 +264,11 @@ export class DungeonScene extends Phaser.Scene {
       stairs: this.stairs,
     });
 
-    // Update the Phaser texture from the offscreen canvas
-    this.textures.remove(this.mapTextureKey);
-    this.textures.addCanvas(this.mapTextureKey, this.activeRenderer.getCanvas());
-    this.mapImage.setTexture(this.mapTextureKey);
+    // Refresh the Phaser texture from the updated offscreen canvas
+    const tex = this.textures.get(this.mapTextureKey);
+    if (tex instanceof Phaser.Textures.CanvasTexture) {
+      tex.refresh();
+    }
   }
 
   private updateHUD() {
