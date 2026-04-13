@@ -9,6 +9,7 @@ import { InventoryPanel } from "../inventoryPanel";
 import { AsciiRenderer, type GameRenderer } from "../renderer";
 import { TilesetRenderer } from "../tilesetRenderer";
 import { getTheme, setTheme, getThemeList } from "../themes";
+import { DPad } from "../dpad";
 
 interface Stairs {
   x: number;
@@ -35,6 +36,7 @@ export class DungeonScene extends Phaser.Scene {
   private rng!: typeof ROT.RNG;
   private hud!: HUD;
   private inventoryPanel!: InventoryPanel;
+  private dpad!: DPad;
   private asciiRenderer!: AsciiRenderer;
   private tilesetRenderer!: TilesetRenderer;
   private activeRenderer!: GameRenderer;
@@ -65,6 +67,13 @@ export class DungeonScene extends Phaser.Scene {
     this.camera = this.cameras.main;
     this.inventory = new Inventory();
     this.hud = new HUD(this.mapWidth, this.mapHeight);
+    this.dpad = new DPad();
+    this.dpad.setMoveCallback((dx, dy) => {
+      if (this.inventoryPanel.isOpen()) return;
+      if (this.gameOver) { this.restartGame(); return; }
+      if (!this.turnEngine.isWaitingForInput()) return;
+      this.turnEngine.submitPlayerMove(dx, dy);
+    });
     this.startNewGame();
 
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
