@@ -39,6 +39,7 @@ export interface GroundItem {
 
 export interface InventoryItem {
   templateId: string;
+  quantity: number;
 }
 
 export interface ActiveBuff {

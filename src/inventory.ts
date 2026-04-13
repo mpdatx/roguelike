@@ -46,7 +46,24 @@ export class Inventory {
 
     const ground = groundItems[idx];
     const template = getTemplate(ground.templateId);
-    this.items.push({ templateId: ground.templateId });
+
+    // Stack potions with existing stack
+    if (template.category === "potion") {
+      const existing = this.items.find((i) => i.templateId === ground.templateId);
+      if (existing) {
+        existing.quantity++;
+        groundItems.splice(idx, 1);
+        onMessage(`Picked up ${template.name}. (x${existing.quantity})`);
+        return true;
+      }
+    }
+
+    if (this.isFull) {
+      onMessage("Inventory full.");
+      return false;
+    }
+
+    this.items.push({ templateId: ground.templateId, quantity: 1 });
     groundItems.splice(idx, 1);
     onMessage(`Picked up ${template.name}.`);
     return true;
@@ -230,6 +247,15 @@ export class Inventory {
     }
   }
 
+  private consumeOne(index: number) {
+    const item = this.items[index];
+    if (item.quantity > 1) {
+      item.quantity--;
+    } else {
+      this.items.splice(index, 1);
+    }
+  }
+
   hasSpeedBuff(): boolean {
     return this.buffs.some((b) => b.type === "speed");
   }
@@ -320,7 +346,7 @@ export class Inventory {
     if (template.healAmount) {
       const healed = Math.min(template.healAmount, player.maxHp - player.hp);
       player.hp += healed;
-      this.items.splice(index, 1);
+      this.consumeOne(index);
       onMessage(`Used ${template.name}. Healed ${healed} HP.`);
       return true;
     }
@@ -337,7 +363,7 @@ export class Inventory {
           turnsRemaining: template.buffDuration,
         });
       }
-      this.items.splice(index, 1);
+      this.consumeOne(index);
       onMessage(`Used ${template.name}.`);
       return true;
     }
@@ -489,7 +515,7 @@ export class Inventory {
           onMessage("This weapon cannot be further enchanted.");
           return false;
         }
-        this.equipment.weapon = { templateId: nextId };
+        this.equipment.weapon = { templateId: nextId, quantity: 1 };
         this.items.splice(index, 1);
         const newName = getTemplate(nextId).name;
         onMessage(`Your weapon glows! It becomes a ${newName}!`);

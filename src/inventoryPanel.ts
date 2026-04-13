@@ -227,16 +227,17 @@ export class InventoryPanel {
       html += `<div class="inv-item-row"><div class="inv-item-info"><div class="inv-item-desc">No items</div></div></div>`;
     }
     for (let i = 0; i < inv.items.length; i++) {
-      const t = getTemplate(inv.items[i].templateId);
+      const invItem = inv.items[i];
+      const t = getTemplate(invItem.templateId);
       const color = `#${t.color.toString(16).padStart(6, "0")}`;
       const equippable = isEquipSlot(t.category);
       const actionLabel = equippable ? "Equip" : "Use";
-      // Show "Offhand" button for 1-handed weapons when main hand is filled
       const canOffhand = t.category === "weapon" && !t.twoHanded && inv.equipment.weapon !== null;
+      const qty = invItem.quantity > 1 ? ` x${invItem.quantity}` : "";
 
       html += `<div class="inv-item-row">
         <div class="inv-item-info">
-          <div class="inv-item-name" style="color:${color}">${t.name}</div>
+          <div class="inv-item-name" style="color:${color}">${t.name}${qty}</div>
           <div class="inv-item-desc">${t.description}${t.twoHanded ? " (2H)" : ""}</div>
         </div>
         <div class="inv-actions">
