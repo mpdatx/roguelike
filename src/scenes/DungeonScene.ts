@@ -1,7 +1,7 @@
 import * as Phaser from "phaser";
 import * as ROT from "rot-js";
-import { type Entity, type Enemy, createPlayer, spawnEnemies } from "../entities";
-import { type GroundItem, spawnItems, getEffectiveStats } from "../items";
+import { type Entity, type Enemy, createPlayer, spawnEnemies, spawnBoss, findFloorTile } from "../entities";
+import { type GroundItem, spawnItems, pickItem, getEffectiveStats } from "../items";
 import { Inventory } from "../inventory";
 import { TurnEngine } from "../turnEngine";
 import { HUD } from "../hud";
@@ -127,10 +127,18 @@ export class DungeonScene extends Phaser.Scene {
     this.fovDistances.clear();
     this.explored.clear();
 
+    // Scale map parameters with depth
+    const depthScale = Math.min(this.depth - 1, 10);
+    const roomWidthMin = 4;
+    const roomWidthMax = Math.min(9 + Math.floor(depthScale / 3), 12);
+    const roomHeightMin = 3;
+    const roomHeightMax = Math.min(6 + Math.floor(depthScale / 4), 9);
+    const corridorMax = Math.min(6 + Math.floor(depthScale / 2), 10);
+
     const digger = new ROT.Map.Digger(this.mapWidth, this.mapHeight, {
-      roomWidth: [4, 9],
-      roomHeight: [3, 6],
-      corridorLength: [2, 6],
+      roomWidth: [roomWidthMin, roomWidthMax],
+      roomHeight: [roomHeightMin, roomHeightMax],
+      corridorLength: [2, corridorMax],
     });
 
     digger.create((x, y, value) => {
@@ -138,21 +146,44 @@ export class DungeonScene extends Phaser.Scene {
     });
 
     const rooms = digger.getRooms();
+    if (rooms.length === 0) return;
 
-    if (rooms.length > 0) {
-      const room = rooms[0];
-      const px = Math.floor((room.getLeft() + room.getRight()) / 2);
-      const py = Math.floor((room.getTop() + room.getBottom()) / 2);
-      if (newPlayer) {
-        this.player = createPlayer(px, py);
-      } else {
-        this.player.x = px;
-        this.player.y = py;
-      }
+    // --- Assign special room roles ---
+    const playerRoomIdx = 0;
+    const stairsRoomIdx = rooms.length > 1 ? rooms.length - 1 : 0;
+
+    // Pick a treasure room (not player start, not stairs) every level
+    let treasureRoomIdx = -1;
+    if (rooms.length > 3) {
+      const candidates = [];
+      for (let i = 1; i < rooms.length - 1; i++) candidates.push(i);
+      treasureRoomIdx = this.rng.getItem(candidates)!;
     }
 
+    // Boss room every 5 levels (not player start, not stairs, not treasure)
+    let bossRoomIdx = -1;
+    if (this.depth % 5 === 0 && rooms.length > 4) {
+      const candidates = [];
+      for (let i = 1; i < rooms.length - 1; i++) {
+        if (i !== treasureRoomIdx) candidates.push(i);
+      }
+      if (candidates.length > 0) bossRoomIdx = this.rng.getItem(candidates)!;
+    }
+
+    // --- Place player ---
+    const startRoom = rooms[playerRoomIdx];
+    const px = Math.floor((startRoom.getLeft() + startRoom.getRight()) / 2);
+    const py = Math.floor((startRoom.getTop() + startRoom.getBottom()) / 2);
+    if (newPlayer) {
+      this.player = createPlayer(px, py);
+    } else {
+      this.player.x = px;
+      this.player.y = py;
+    }
+
+    // --- Place stairs ---
     if (rooms.length > 1) {
-      const lastRoom = rooms[rooms.length - 1];
+      const lastRoom = rooms[stairsRoomIdx];
       this.stairs = {
         x: Math.floor((lastRoom.getLeft() + lastRoom.getRight()) / 2),
         y: Math.floor((lastRoom.getTop() + lastRoom.getBottom()) / 2),
@@ -161,8 +192,47 @@ export class DungeonScene extends Phaser.Scene {
       this.stairs = null;
     }
 
-    this.enemies = spawnEnemies(rooms, this.map, this.rng, this.depth);
-    this.groundItems = spawnItems(rooms, this.map, this.enemies, this.rng);
+    // --- Spawn enemies ---
+    const enemySkip = new Set([playerRoomIdx]);
+    // Boss room and treasure room get custom enemy counts
+    const enemyOverrides = new Map<number, number>();
+    if (treasureRoomIdx >= 0) enemyOverrides.set(treasureRoomIdx, 0); // no enemies in treasure room
+    if (bossRoomIdx >= 0) enemyOverrides.set(bossRoomIdx, 0); // boss spawned separately
+
+    this.enemies = spawnEnemies(rooms, this.map, this.rng, this.depth, enemySkip, enemyOverrides);
+
+    // Spawn boss
+    if (bossRoomIdx >= 0) {
+      const boss = spawnBoss(rooms[bossRoomIdx], this.map, this.rng, this.depth);
+      this.enemies.push(boss);
+    }
+
+    // --- Spawn items ---
+    const itemSkip = new Set<number>();
+    if (bossRoomIdx >= 0) itemSkip.add(bossRoomIdx); // boss room: no random loot
+    const itemOverrides = new Map<number, number>();
+    if (treasureRoomIdx >= 0) {
+      // Treasure room: 3-5 items, all depth-scaled
+      itemOverrides.set(treasureRoomIdx, this.rng.getUniformInt(3, 5));
+    }
+
+    this.groundItems = spawnItems(rooms, this.map, this.enemies, this.rng, this.depth, itemSkip, itemOverrides);
+
+    // Boss room drops: 1-2 guaranteed good items near the boss
+    if (bossRoomIdx >= 0) {
+      const bossRoom = rooms[bossRoomIdx];
+      const bossDrops = this.rng.getUniformInt(1, 2);
+      const occupied = new Set(this.enemies.map((e) => `${e.x},${e.y}`));
+      for (let i = 0; i < bossDrops; i++) {
+        const pos = findFloorTile(bossRoom, this.map, occupied, this.rng);
+        if (pos) {
+          // Force rare item (pick from weight <= 2 items)
+          const rareItem = pickItem(this.rng, this.depth + 5);
+          this.groundItems.push({ templateId: rareItem.id, x: pos.x, y: pos.y });
+          occupied.add(`${pos.x},${pos.y}`);
+        }
+      }
+    }
   }
 
   private startLevel() {

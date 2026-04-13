@@ -159,35 +159,66 @@ export function getEffectiveStats(
   return { attack, defense, maxHp, fovRange };
 }
 
+function findItemTile(
+  room: Room,
+  map: Map<string, number>,
+  enemies: Enemy[],
+  items: GroundItem[],
+  rng: typeof ROT.RNG,
+  maxAttempts = 20,
+): { x: number; y: number } | null {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const x = rng.getUniformInt(room.getLeft(), room.getRight());
+    const y = rng.getUniformInt(room.getTop(), room.getBottom());
+    if (map.get(`${x},${y}`) !== 0) continue;
+    if (enemies.some((e) => e.x === x && e.y === y)) continue;
+    if (items.some((i) => i.x === x && i.y === y)) continue;
+    return { x, y };
+  }
+  return null;
+}
+
+export function pickItem(
+  rng: typeof ROT.RNG,
+  depth: number = 1,
+): ItemTemplate {
+  // Depth-scaled weights: rare items become more common on deeper levels
+  // depthBoost increases the weight of rare items (low base weight)
+  const depthBoost = Math.floor(depth / 3);
+  const adjusted = BASE_TEMPLATES.map((t) => {
+    const boost = t.weight <= 2 ? depthBoost : 0;
+    return { template: t, adjustedWeight: t.weight + boost };
+  });
+  const totalWeight = adjusted.reduce((sum, a) => sum + a.adjustedWeight, 0);
+
+  let roll = rng.getUniform() * totalWeight;
+  for (const a of adjusted) {
+    roll -= a.adjustedWeight;
+    if (roll <= 0) return a.template;
+  }
+  return BASE_TEMPLATES[0];
+}
+
 export function spawnItems(
   rooms: Room[],
   map: Map<string, number>,
   enemies: Enemy[],
   rng: typeof ROT.RNG,
+  depth: number = 1,
+  skipRooms: Set<number> = new Set(),
+  overrideCounts?: Map<number, number>,
 ): GroundItem[] {
   const items: GroundItem[] = [];
-  const totalWeight = BASE_TEMPLATES.reduce((sum, t) => sum + t.weight, 0);
 
-  function pickTemplate(): ItemTemplate {
-    let roll = rng.getUniform() * totalWeight;
-    for (const t of BASE_TEMPLATES) {
-      roll -= t.weight;
-      if (roll <= 0) return t;
-    }
-    return BASE_TEMPLATES[0];
-  }
+  for (let i = 0; i < rooms.length; i++) {
+    if (skipRooms.has(i)) continue;
+    const room = rooms[i];
+    const count = overrideCounts?.get(i) ?? rng.getUniformInt(0, 2);
 
-  for (const room of rooms) {
-    const count = rng.getUniformInt(0, 2);
     for (let j = 0; j < count; j++) {
-      const x = rng.getUniformInt(room.getLeft(), room.getRight());
-      const y = rng.getUniformInt(room.getTop(), room.getBottom());
-
-      if (map.get(`${x},${y}`) !== 0) continue;
-      if (enemies.some((e) => e.x === x && e.y === y)) continue;
-      if (items.some((i) => i.x === x && i.y === y)) continue;
-
-      items.push({ templateId: pickTemplate().id, x, y });
+      const pos = findItemTile(room, map, enemies, items, rng);
+      if (!pos) continue;
+      items.push({ templateId: pickItem(rng, depth).id, x: pos.x, y: pos.y });
     }
   }
 
