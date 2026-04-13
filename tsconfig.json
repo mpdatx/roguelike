@@ -9,8 +9,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "outDir": "dist",
-    "sourceMap": true
+    "noEmit": true
   },
   "include": ["src"]
 }
