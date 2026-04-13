@@ -5,10 +5,15 @@ import {
   type EquipSlot,
   type ActiveBuff,
   type GroundItem,
+  type MaterialType,
   getTemplate,
   getSlotForCategory,
   isEquipSlot,
 } from "./items";
+
+export type Materials = Record<MaterialType, number>;
+
+const EMPTY_MATERIALS: Materials = { leather: 0, wood: 0, steel: 0, stone: 0, crystal: 0, cloth: 0 };
 
 const MAX_SLOTS = 20;
 
@@ -16,7 +21,7 @@ export class Inventory {
   items: InventoryItem[] = [];
   equipment: Equipment = { weapon: null, offhand: null, armor: null, ring1: null, ring2: null };
   buffs: ActiveBuff[] = [];
-  materials = 0;
+  materials: Materials = { ...EMPTY_MATERIALS };
   private regenCounter = 0;
 
   get isFull(): boolean {
@@ -268,7 +273,7 @@ export class Inventory {
     this.items = [];
     this.equipment = { weapon: null, offhand: null, armor: null, ring1: null, ring2: null };
     this.buffs = [];
-    this.materials = 0;
+    this.materials = { ...EMPTY_MATERIALS };
     this.regenCounter = 0;
   }
 
@@ -280,12 +285,12 @@ export class Inventory {
       onMessage("Can only salvage equipment.");
       return false;
     }
-    // Rarer items yield more materials
-    const yields: Record<number, number> = { 8: 1, 5: 2, 4: 2, 3: 3, 2: 4, 1: 5 };
+    const matType = template.salvageType ?? "steel";
+    const yields: Record<number, number> = { 8: 1, 6: 1, 5: 2, 4: 2, 3: 3, 2: 4, 1: 5 };
     const gained = yields[template.weight] ?? 2;
-    this.materials += gained;
+    this.materials[matType] += gained;
     this.items.splice(index, 1);
-    onMessage(`Salvaged ${template.name} for ${gained} materials. (Total: ${this.materials})`);
+    onMessage(`Salvaged ${template.name}: +${gained} ${matType}.`);
     return true;
   }
 

@@ -4,6 +4,7 @@ import type { Entity, Enemy } from "./entities";
 import { getTheme } from "./themes";
 
 export type ItemCategory = "potion" | "scroll" | "weapon" | "armor" | "ring" | "shield";
+export type MaterialType = "leather" | "wood" | "steel" | "stone" | "crystal" | "cloth";
 export type ScrollEffect = "lightning" | "confusion" | "mapping" | "teleportation" | "fireball" | "fear" | "enchant";
 export type BuffType = "strength" | "speed" | "regen" | "invisibility";
 
@@ -24,6 +25,7 @@ export interface ItemTemplate {
   maxHpBonus?: number;
   fovBonus?: number;
   twoHanded?: boolean;
+  salvageType?: MaterialType;
   lifesteal?: boolean;
   thorns?: number;
   blockChance?: number;
@@ -68,16 +70,16 @@ const BASE_TEMPLATES: ItemTemplate[] = [
   { id: "scroll_confusion", name: "", category: "scroll", color: 0, description: "", weight: 3, scrollEffect: "confusion" },
   { id: "scroll_mapping", name: "", category: "scroll", color: 0, description: "", weight: 2, scrollEffect: "mapping" },
   { id: "scroll_teleportation", name: "", category: "scroll", color: 0, description: "", weight: 3, scrollEffect: "teleportation" },
-  { id: "dagger", name: "", category: "weapon", color: 0, description: "", weight: 8, attackBonus: 1 },
-  { id: "sword", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2 },
-  { id: "battle_axe", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3, twoHanded: true },
-  { id: "enchanted_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 4, twoHanded: true },
-  { id: "leather_armor", name: "", category: "armor", color: 0, description: "", weight: 8, defenseBonus: 1 },
-  { id: "chainmail", name: "", category: "armor", color: 0, description: "", weight: 4, defenseBonus: 2 },
-  { id: "plate_armor", name: "", category: "armor", color: 0, description: "", weight: 1, defenseBonus: 3 },
-  { id: "ring_vitality", name: "", category: "ring", color: 0, description: "", weight: 3, maxHpBonus: 5 },
-  { id: "ring_sight", name: "", category: "ring", color: 0, description: "", weight: 3, fovBonus: 3 },
-  { id: "ring_protection", name: "", category: "ring", color: 0, description: "", weight: 3, defenseBonus: 1 },
+  { id: "dagger", name: "", category: "weapon", color: 0, description: "", weight: 8, attackBonus: 1, salvageType: "steel" },
+  { id: "sword", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2, salvageType: "steel" },
+  { id: "battle_axe", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3, twoHanded: true, salvageType: "steel" },
+  { id: "enchanted_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 4, twoHanded: true, salvageType: "crystal" },
+  { id: "leather_armor", name: "", category: "armor", color: 0, description: "", weight: 8, defenseBonus: 1, salvageType: "leather" },
+  { id: "chainmail", name: "", category: "armor", color: 0, description: "", weight: 4, defenseBonus: 2, salvageType: "steel" },
+  { id: "plate_armor", name: "", category: "armor", color: 0, description: "", weight: 1, defenseBonus: 3, salvageType: "steel" },
+  { id: "ring_vitality", name: "", category: "ring", color: 0, description: "", weight: 3, maxHpBonus: 5, salvageType: "crystal" },
+  { id: "ring_sight", name: "", category: "ring", color: 0, description: "", weight: 3, fovBonus: 3, salvageType: "crystal" },
+  { id: "ring_protection", name: "", category: "ring", color: 0, description: "", weight: 3, defenseBonus: 1, salvageType: "stone" },
   // New consumables
   { id: "regen_potion", name: "", category: "potion", color: 0, description: "", weight: 3, buffType: "regen", buffDuration: 15, buffAmount: 1 },
   { id: "invisibility_potion", name: "", category: "potion", color: 0, description: "", weight: 2, buffType: "invisibility", buffDuration: 8, buffAmount: 1 },
@@ -85,18 +87,18 @@ const BASE_TEMPLATES: ItemTemplate[] = [
   { id: "scroll_fear", name: "", category: "scroll", color: 0, description: "", weight: 2, scrollEffect: "fear" },
   { id: "scroll_enchant", name: "", category: "scroll", color: 0, description: "", weight: 1, scrollEffect: "enchant" },
   // New weapons
-  { id: "spear", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2 },
-  { id: "war_hammer", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3, twoHanded: true },
-  { id: "vampiric_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 2, lifesteal: true },
+  { id: "spear", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2, salvageType: "wood" },
+  { id: "war_hammer", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3, twoHanded: true, salvageType: "stone" },
+  { id: "vampiric_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 2, lifesteal: true, salvageType: "crystal" },
   // New armor
-  { id: "thorned_armor", name: "", category: "armor", color: 0, description: "", weight: 2, defenseBonus: 1, thorns: 1 },
+  { id: "thorned_armor", name: "", category: "armor", color: 0, description: "", weight: 2, defenseBonus: 1, thorns: 1, salvageType: "leather" },
   // Shields (offhand)
-  { id: "buckler", name: "", category: "shield", color: 0, description: "", weight: 6, defenseBonus: 1, blockChance: 0.15 },
-  { id: "kite_shield", name: "", category: "shield", color: 0, description: "", weight: 3, defenseBonus: 2, blockChance: 0.25 },
-  { id: "tower_shield", name: "", category: "shield", color: 0, description: "", weight: 1, defenseBonus: 3, blockChance: 0.35 },
+  { id: "buckler", name: "", category: "shield", color: 0, description: "", weight: 6, defenseBonus: 1, blockChance: 0.15, salvageType: "wood" },
+  { id: "kite_shield", name: "", category: "shield", color: 0, description: "", weight: 3, defenseBonus: 2, blockChance: 0.25, salvageType: "steel" },
+  { id: "tower_shield", name: "", category: "shield", color: 0, description: "", weight: 1, defenseBonus: 3, blockChance: 0.35, salvageType: "steel" },
   // New rings
-  { id: "ring_regen", name: "", category: "ring", color: 0, description: "", weight: 2, regenRate: 5 },
-  { id: "ring_blink", name: "", category: "ring", color: 0, description: "", weight: 2, blinkChance: 0.1 },
+  { id: "ring_regen", name: "", category: "ring", color: 0, description: "", weight: 2, regenRate: 5, salvageType: "crystal" },
+  { id: "ring_blink", name: "", category: "ring", color: 0, description: "", weight: 2, blinkChance: 0.1, salvageType: "crystal" },
 ];
 
 const baseMap = new Map<string, ItemTemplate>();

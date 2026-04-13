@@ -275,7 +275,13 @@ export class InventoryPanel {
     }
 
     // Footer
-    html += `<div class="inv-footer">${inv.slotCount}/${inv.maxSlots} slots | Materials: ${inv.materials}</div>`;
+    // Materials summary
+    const mats = inv.materials;
+    const matParts = Object.entries(mats)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `${v} ${k}`);
+    const matStr = matParts.length > 0 ? matParts.join(", ") : "none";
+    html += `<div class="inv-footer">${inv.slotCount}/${inv.maxSlots} slots | Materials: ${matStr}</div>`;
 
     this.content.innerHTML = html;
 
