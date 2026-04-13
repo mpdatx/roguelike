@@ -1,6 +1,6 @@
 import type { Entity, Enemy } from "./entities";
 import type { GroundItem } from "./items";
-import { getTemplate, getSlotForCategory, type EquipSlot } from "./items";
+import { getTemplate, isEquipSlot, type EquipSlot } from "./items";
 import type { Inventory } from "./inventory";
 
 export class InventoryPanel {
@@ -188,7 +188,8 @@ export class InventoryPanel {
     const slots: { slot: EquipSlot; label: string }[] = [
       { slot: "weapon", label: "Weapon" },
       { slot: "armor", label: "Armor" },
-      { slot: "ring", label: "Ring" },
+      { slot: "ring1", label: "Ring 1" },
+      { slot: "ring2", label: "Ring 2" },
     ];
     for (const { slot, label } of slots) {
       const equipped = inv.equipment[slot];
@@ -209,8 +210,9 @@ export class InventoryPanel {
     // Active buffs
     if (inv.buffs.length > 0) {
       html += `<div class="inv-section-title">Active Effects</div>`;
+      const buffLabels: Record<string, string> = { strength: "Strength", speed: "Speed", regen: "Regeneration", invisibility: "Invisibility" };
       for (const buff of inv.buffs) {
-        const label = buff.type === "strength" ? "Strength" : "Speed";
+        const label = buffLabels[buff.type] ?? buff.type;
         html += `<div class="inv-item-row"><div class="inv-item-info">
           <div class="inv-item-name">${label} +${buff.amount}</div>
           <div class="inv-item-desc">${buff.turnsRemaining} turns remaining</div>
@@ -226,8 +228,8 @@ export class InventoryPanel {
     for (let i = 0; i < inv.items.length; i++) {
       const t = getTemplate(inv.items[i].templateId);
       const color = `#${t.color.toString(16).padStart(6, "0")}`;
-      const isEquippable = getSlotForCategory(t.category) !== null;
-      const actionLabel = isEquippable ? "Equip" : "Use";
+      const equippable = isEquipSlot(t.category);
+      const actionLabel = equippable ? "Equip" : "Use";
 
       html += `<div class="inv-item-row">
         <div class="inv-item-info">
@@ -236,13 +238,14 @@ export class InventoryPanel {
         </div>
         <div class="inv-actions">
           <button data-use="${i}">${actionLabel}</button>
+          ${equippable ? `<button data-salvage="${i}">Salvage</button>` : ""}
           <button data-drop="${i}">Drop</button>
         </div>
       </div>`;
     }
 
     // Footer
-    html += `<div class="inv-footer">${inv.slotCount}/${inv.maxSlots} slots</div>`;
+    html += `<div class="inv-footer">${inv.slotCount}/${inv.maxSlots} slots | Materials: ${inv.materials}</div>`;
 
     this.content.innerHTML = html;
 
@@ -262,6 +265,16 @@ export class InventoryPanel {
           this.onMessage,
           this.getRng(),
         );
+        this.onChanged();
+        this.render();
+      });
+    });
+
+    this.content.querySelectorAll("[data-salvage]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt((btn as HTMLElement).dataset.salvage!);
+        this.inventory.salvageItem(idx, this.onMessage);
         this.onChanged();
         this.render();
       });

@@ -7,14 +7,16 @@ import {
   type GroundItem,
   getTemplate,
   getSlotForCategory,
+  isEquipSlot,
 } from "./items";
 
 const MAX_SLOTS = 20;
 
 export class Inventory {
   items: InventoryItem[] = [];
-  equipment: Equipment = { weapon: null, armor: null, ring: null };
+  equipment: Equipment = { weapon: null, armor: null, ring1: null, ring2: null };
   buffs: ActiveBuff[] = [];
+  materials = 0;
   private regenCounter = 0;
 
   get isFull(): boolean {
@@ -65,7 +67,7 @@ export class Inventory {
     if (!item) return false;
     const template = getTemplate(item.templateId);
 
-    if (template.category === "weapon" || template.category === "armor" || template.category === "ring") {
+    if (isEquipSlot(template.category)) {
       return this.equipItem(index, onMessage);
     }
 
@@ -84,12 +86,23 @@ export class Inventory {
     const item = this.items[index];
     if (!item) return false;
     const template = getTemplate(item.templateId);
-    const slot = getSlotForCategory(template.category);
+    let slot = getSlotForCategory(template.category);
     if (!slot) return false;
+
+    // For rings, prefer empty slot, otherwise replace ring1
+    if (template.category === "ring") {
+      if (!this.equipment.ring1) {
+        slot = "ring1";
+      } else if (!this.equipment.ring2) {
+        slot = "ring2";
+      } else {
+        slot = "ring1"; // both full, replace ring1
+      }
+    }
 
     const current = this.equipment[slot];
     if (current && this.items.length >= MAX_SLOTS) {
-      onMessage("Inventory full — can't unequip current item.");
+      onMessage("Inventory full \u2014 can't unequip current item.");
       return false;
     }
 
@@ -171,14 +184,36 @@ export class Inventory {
 
   reset() {
     this.items = [];
-    this.equipment = { weapon: null, armor: null, ring: null };
+    this.equipment = { weapon: null, armor: null, ring1: null, ring2: null };
     this.buffs = [];
+    this.materials = 0;
     this.regenCounter = 0;
   }
 
+  salvageItem(index: number, onMessage: (msg: string) => void): boolean {
+    const item = this.items[index];
+    if (!item) return false;
+    const template = getTemplate(item.templateId);
+    if (!isEquipSlot(template.category)) {
+      onMessage("Can only salvage equipment.");
+      return false;
+    }
+    // Rarer items yield more materials
+    const yields: Record<number, number> = { 8: 1, 5: 2, 4: 2, 3: 3, 2: 4, 1: 5 };
+    const gained = yields[template.weight] ?? 2;
+    this.materials += gained;
+    this.items.splice(index, 1);
+    onMessage(`Salvaged ${template.name} for ${gained} materials. (Total: ${this.materials})`);
+    return true;
+  }
+
+  private allEquipped(): InventoryItem[] {
+    return [this.equipment.weapon, this.equipment.armor, this.equipment.ring1, this.equipment.ring2]
+      .filter((s): s is InventoryItem => s !== null);
+  }
+
   getEquipRegenRate(): number {
-    for (const slot of [this.equipment.weapon, this.equipment.armor, this.equipment.ring]) {
-      if (!slot) continue;
+    for (const slot of this.allEquipped()) {
       const t = getTemplate(slot.templateId);
       if (t.regenRate) return t.regenRate;
     }
@@ -201,8 +236,12 @@ export class Inventory {
   }
 
   getBlinkChance(): number {
-    const r = this.equipment.ring;
-    return r ? (getTemplate(r.templateId).blinkChance ?? 0) : 0;
+    for (const slot of [this.equipment.ring1, this.equipment.ring2]) {
+      if (!slot) continue;
+      const t = getTemplate(slot.templateId);
+      if (t.blinkChance) return t.blinkChance;
+    }
+    return 0;
   }
 
   private usePotion(

@@ -49,7 +49,8 @@ export interface ActiveBuff {
 export interface Equipment {
   weapon: InventoryItem | null;
   armor: InventoryItem | null;
-  ring: InventoryItem | null;
+  ring1: InventoryItem | null;
+  ring2: InventoryItem | null;
 }
 
 export type EquipSlot = keyof Equipment;
@@ -110,8 +111,12 @@ export function getTemplate(id: string): ItemTemplate {
 export function getSlotForCategory(category: ItemCategory): EquipSlot | null {
   if (category === "weapon") return "weapon";
   if (category === "armor") return "armor";
-  if (category === "ring") return "ring";
+  if (category === "ring") return "ring1"; // default; equip logic picks actual slot
   return null;
+}
+
+export function isEquipSlot(category: ItemCategory): boolean {
+  return category === "weapon" || category === "armor" || category === "ring";
 }
 
 export interface EffectiveStats {
@@ -132,7 +137,7 @@ export function getEffectiveStats(
   let maxHp = player.maxHp;
   let fovRange = theme.baseFovRange;
 
-  for (const slot of [equipment.weapon, equipment.armor, equipment.ring]) {
+  for (const slot of [equipment.weapon, equipment.armor, equipment.ring1, equipment.ring2]) {
     if (!slot) continue;
     const t = getTemplate(slot.templateId);
     attack += t.attackBonus ?? 0;

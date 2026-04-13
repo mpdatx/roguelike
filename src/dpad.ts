@@ -70,8 +70,8 @@ export class DPad {
         -webkit-user-select: none;
       }
       .dpad-btn {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         background: rgba(30, 30, 50, 0.8);
         border: 1px solid rgba(80, 80, 120, 0.5);
         border-radius: 6px;
@@ -99,6 +99,11 @@ export class DPad {
       .dpad-n, .dpad-s, .dpad-e, .dpad-w {
         font-size: 22px;
         color: #ccc;
+      }
+      @media (max-height: 700px) {
+        #dpad { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+        .dpad-btn { width: 38px; height: 38px; font-size: 16px; }
+        .dpad-n, .dpad-s, .dpad-e, .dpad-w { font-size: 18px; }
       }
       @media (hover: hover) and (pointer: fine) {
         #dpad { display: none; }
