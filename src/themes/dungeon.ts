@@ -30,7 +30,7 @@ export const dungeonTheme: ThemeDefinition = {
     floor: "\u00b7",
     stairs: ">",
     enemies: { Rat: "r", Goblin: "g", Snake: "s" },
-    items: { potion: "!", scroll: "?", weapon: "/", armor: "[", ring: "=" },
+    items: { potion: "!", scroll: "?", weapon: "/", armor: "[", ring: "=", shield: ")" },
   },
 
   enemies: [
@@ -67,7 +67,9 @@ export const dungeonTheme: ThemeDefinition = {
     { id: "war_hammer", name: "War Hammer", description: "+3 Attack", color: 0xccbbaa },
     { id: "vampiric_blade", name: "Vampiric Blade", description: "+2 Attack, lifesteal", color: 0xcc2244 },
     { id: "thorned_armor", name: "Thorned Armor", description: "+1 Def, reflect 1 dmg", color: 0x66aa44 },
-    { id: "shield_armor", name: "Kite Shield", description: "+1 Def, 25% block", color: 0x8899aa },
+    { id: "buckler", name: "Buckler", description: "+1 Def, 15% block", color: 0x8899aa },
+    { id: "kite_shield", name: "Kite Shield", description: "+2 Def, 25% block", color: 0xaabbcc },
+    { id: "tower_shield", name: "Tower Shield", description: "+3 Def, 35% block", color: 0xccddee },
     { id: "ring_regen", name: "Ring of Regeneration", description: "Heal 1 HP every 5 turns", color: 0x44ff88 },
     { id: "ring_blink", name: "Ring of Blinking", description: "10% blink when hit", color: 0xaa88ff },
   ],
@@ -221,6 +223,27 @@ export const dungeonTheme: ThemeDefinition = {
         px(ctx,8,22,16,6,color); px(ctx,9,28,14,2,color);
         px(ctx,8,22,1,6,darken(color)); px(ctx,23,22,1,6,darken(color));
         px(ctx,15,24,2,6,darken(color));
+      },
+      shield: (ctx, color) => {
+        // Shield shape
+        px(ctx, 8, 3, 16, 22, color);
+        px(ctx, 10, 2, 12, 1, color);
+        px(ctx, 10, 25, 12, 1, color);
+        px(ctx, 12, 26, 8, 2, color);
+        px(ctx, 14, 28, 4, 2, darken(color));
+        // Edge highlight
+        px(ctx, 8, 3, 1, 22, lighten(color));
+        px(ctx, 23, 3, 1, 22, darken(color));
+        // Boss/emblem
+        px(ctx, 14, 10, 4, 4, lighten(color));
+        px(ctx, 15, 11, 2, 2, "#ffffff44");
+        // Rivets
+        px(ctx, 10, 5, 2, 2, darken(color));
+        px(ctx, 20, 5, 2, 2, darken(color));
+        px(ctx, 10, 21, 2, 2, darken(color));
+        px(ctx, 20, 21, 2, 2, darken(color));
+        // Center stripe
+        px(ctx, 15, 3, 2, 22, darken(color));
       },
       ring: (ctx, color) => {
         px(ctx,9,12,14,12,color); px(ctx,11,10,10,2,color); px(ctx,11,24,10,2,color);

@@ -30,7 +30,7 @@ export const spaceStationTheme: ThemeDefinition = {
     floor: ".",
     stairs: "\u2261", // triple bar (elevator)
     enemies: { "Maintenance Bot": "b", "Security Drone": "d", Xenomorph: "x" },
-    items: { potion: "+", scroll: "\u00a7", weapon: "\u2191", armor: "\u00d8", ring: "\u00b0" },
+    items: { potion: "+", scroll: "\u00a7", weapon: "\u2191", armor: "\u00d8", ring: "\u00b0", shield: "\u25d7" },
   },
 
   enemies: [
@@ -67,7 +67,9 @@ export const spaceStationTheme: ThemeDefinition = {
     { id: "war_hammer", name: "Power Maul", description: "+3 Attack", color: 0xccbbaa },
     { id: "vampiric_blade", name: "Neuro-Drain Blade", description: "+2 Attack, lifesteal", color: 0xcc2244 },
     { id: "thorned_armor", name: "Reactive Plating", description: "+1 Def, reflect 1 dmg", color: 0x66aa44 },
-    { id: "shield_armor", name: "Riot Shield", description: "+1 Def, 25% block", color: 0x8899aa },
+    { id: "buckler", name: "Deflector Field", description: "+1 Def, 15% block", color: 0x8899aa },
+    { id: "kite_shield", name: "Riot Shield", description: "+2 Def, 25% block", color: 0xaabbcc },
+    { id: "tower_shield", name: "Blast Shield", description: "+3 Def, 35% block", color: 0xccddee },
     { id: "ring_regen", name: "Bio-Repair Module", description: "Heal 1 HP every 5 turns", color: 0x44ff88 },
     { id: "ring_blink", name: "Phase Shift Module", description: "10% blink when hit", color: 0xaa88ff },
   ],
@@ -372,6 +374,25 @@ export const spaceStationTheme: ThemeDefinition = {
         // Skirt
         px(ctx, 9, 22, 14, 6, color);
         px(ctx, 15, 23, 2, 5, darken(color));
+      },
+      shield: (ctx, color) => {
+        // Energy shield device
+        px(ctx, 7, 4, 18, 24, "#333344");
+        px(ctx, 9, 3, 14, 1, "#444455");
+        px(ctx, 9, 28, 14, 1, "#222233");
+        // Shield surface
+        px(ctx, 9, 6, 14, 18, color);
+        px(ctx, 9, 6, 2, 18, darken(color));
+        px(ctx, 21, 6, 2, 18, lighten(color));
+        // Energy field lines
+        px(ctx, 12, 8, 8, 1, lighten(color));
+        px(ctx, 12, 14, 8, 1, lighten(color));
+        px(ctx, 12, 20, 8, 1, lighten(color));
+        // Power indicator
+        px(ctx, 14, 11, 4, 2, "#00ccff");
+        px(ctx, 15, 12, 2, 1, "#ffffff");
+        // Handle
+        px(ctx, 14, 25, 4, 3, "#555566");
       },
       ring: (ctx, color) => {
         // Cybernetic implant - circular with tech detail

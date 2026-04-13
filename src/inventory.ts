@@ -14,7 +14,7 @@ const MAX_SLOTS = 20;
 
 export class Inventory {
   items: InventoryItem[] = [];
-  equipment: Equipment = { weapon: null, armor: null, ring1: null, ring2: null };
+  equipment: Equipment = { weapon: null, offhand: null, armor: null, ring1: null, ring2: null };
   buffs: ActiveBuff[] = [];
   materials = 0;
   private regenCounter = 0;
@@ -86,36 +86,92 @@ export class Inventory {
     const item = this.items[index];
     if (!item) return false;
     const template = getTemplate(item.templateId);
-    let slot = getSlotForCategory(template.category);
-    if (!slot) return false;
 
-    // For rings, prefer empty slot, otherwise replace ring1
-    if (template.category === "ring") {
+    // Determine target slot and items that need to be unequipped
+    const toUnequip: EquipSlot[] = [];
+    let slot: EquipSlot;
+
+    if (template.category === "weapon") {
+      slot = "weapon";
+      if (this.equipment.weapon) toUnequip.push("weapon");
+      // 2-handed weapon clears offhand
+      if (template.twoHanded && this.equipment.offhand) toUnequip.push("offhand");
+    } else if (template.category === "shield") {
+      slot = "offhand";
+      if (this.equipment.offhand) toUnequip.push("offhand");
+      // Shield conflicts with 2-handed weapon
+      if (this.equipment.weapon) {
+        const wt = getTemplate(this.equipment.weapon.templateId);
+        if (wt.twoHanded) toUnequip.push("weapon");
+      }
+    } else if (template.category === "ring") {
       if (!this.equipment.ring1) {
         slot = "ring1";
       } else if (!this.equipment.ring2) {
         slot = "ring2";
       } else {
-        slot = "ring1"; // both full, replace ring1
+        slot = "ring1";
+        toUnequip.push("ring1");
       }
+    } else {
+      slot = getSlotForCategory(template.category)!;
+      if (!slot) return false;
+      if (this.equipment[slot]) toUnequip.push(slot);
     }
 
-    const current = this.equipment[slot];
-    if (current && this.items.length >= MAX_SLOTS) {
-      onMessage("Inventory full \u2014 can't unequip current item.");
+    // Check inventory space for unequipped items (we remove 1 item, add back N)
+    const netAdd = toUnequip.length - 1; // -1 because we remove the item being equipped
+    if (this.items.length + netAdd >= MAX_SLOTS) {
+      onMessage("Inventory full \u2014 can't unequip current items.");
       return false;
     }
 
     this.items.splice(index, 1);
 
-    if (current) {
-      this.items.push(current);
-      const oldName = getTemplate(current.templateId).name;
-      onMessage(`Unequipped ${oldName}.`);
+    for (const s of toUnequip) {
+      const current = this.equipment[s];
+      if (current) {
+        this.items.push(current);
+        onMessage(`Unequipped ${getTemplate(current.templateId).name}.`);
+        this.equipment[s] = null;
+      }
     }
 
     this.equipment[slot] = item;
     onMessage(`Equipped ${template.name}.`);
+    return true;
+  }
+
+  equipToOffhand(index: number, onMessage: (msg: string) => void): boolean {
+    const item = this.items[index];
+    if (!item) return false;
+    const template = getTemplate(item.templateId);
+    if (template.category !== "weapon" || template.twoHanded) {
+      onMessage("Only 1-handed weapons can go in the off hand.");
+      return false;
+    }
+    // Check if main hand weapon is 2-handed
+    if (this.equipment.weapon) {
+      const wt = getTemplate(this.equipment.weapon.templateId);
+      if (wt.twoHanded) {
+        onMessage("Can't dual-wield with a 2-handed weapon.");
+        return false;
+      }
+    }
+
+    const current = this.equipment.offhand;
+    if (current && this.items.length >= MAX_SLOTS) {
+      onMessage("Inventory full \u2014 can't unequip current off hand.");
+      return false;
+    }
+
+    this.items.splice(index, 1);
+    if (current) {
+      this.items.push(current);
+      onMessage(`Unequipped ${getTemplate(current.templateId).name}.`);
+    }
+    this.equipment.offhand = item;
+    onMessage(`Equipped ${template.name} in off hand.`);
     return true;
   }
 
@@ -184,7 +240,7 @@ export class Inventory {
 
   reset() {
     this.items = [];
-    this.equipment = { weapon: null, armor: null, ring1: null, ring2: null };
+    this.equipment = { weapon: null, offhand: null, armor: null, ring1: null, ring2: null };
     this.buffs = [];
     this.materials = 0;
     this.regenCounter = 0;
@@ -208,7 +264,7 @@ export class Inventory {
   }
 
   private allEquipped(): InventoryItem[] {
-    return [this.equipment.weapon, this.equipment.armor, this.equipment.ring1, this.equipment.ring2]
+    return [this.equipment.weapon, this.equipment.offhand, this.equipment.armor, this.equipment.ring1, this.equipment.ring2]
       .filter((s): s is InventoryItem => s !== null);
   }
 
@@ -221,8 +277,10 @@ export class Inventory {
   }
 
   hasLifesteal(): boolean {
-    const w = this.equipment.weapon;
-    return w ? (getTemplate(w.templateId).lifesteal ?? false) : false;
+    for (const slot of [this.equipment.weapon, this.equipment.offhand]) {
+      if (slot && getTemplate(slot.templateId).lifesteal) return true;
+    }
+    return false;
   }
 
   getThorns(): number {
@@ -231,6 +289,13 @@ export class Inventory {
   }
 
   getBlockChance(): number {
+    // Shields provide block chance (offhand slot)
+    const oh = this.equipment.offhand;
+    if (oh) {
+      const t = getTemplate(oh.templateId);
+      if (t.blockChance) return t.blockChance;
+    }
+    // Armor can also have block chance
     const a = this.equipment.armor;
     return a ? (getTemplate(a.templateId).blockChance ?? 0) : 0;
   }

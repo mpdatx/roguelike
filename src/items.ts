@@ -3,7 +3,7 @@ import type { Room } from "rot-js/lib/map/features";
 import type { Entity, Enemy } from "./entities";
 import { getTheme } from "./themes";
 
-export type ItemCategory = "potion" | "scroll" | "weapon" | "armor" | "ring";
+export type ItemCategory = "potion" | "scroll" | "weapon" | "armor" | "ring" | "shield";
 export type ScrollEffect = "lightning" | "confusion" | "mapping" | "teleportation" | "fireball" | "fear" | "enchant";
 export type BuffType = "strength" | "speed" | "regen" | "invisibility";
 
@@ -23,6 +23,7 @@ export interface ItemTemplate {
   defenseBonus?: number;
   maxHpBonus?: number;
   fovBonus?: number;
+  twoHanded?: boolean;
   lifesteal?: boolean;
   thorns?: number;
   blockChance?: number;
@@ -48,6 +49,7 @@ export interface ActiveBuff {
 
 export interface Equipment {
   weapon: InventoryItem | null;
+  offhand: InventoryItem | null;
   armor: InventoryItem | null;
   ring1: InventoryItem | null;
   ring2: InventoryItem | null;
@@ -67,8 +69,8 @@ const BASE_TEMPLATES: ItemTemplate[] = [
   { id: "scroll_teleportation", name: "", category: "scroll", color: 0, description: "", weight: 3, scrollEffect: "teleportation" },
   { id: "dagger", name: "", category: "weapon", color: 0, description: "", weight: 8, attackBonus: 1 },
   { id: "sword", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2 },
-  { id: "battle_axe", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3 },
-  { id: "enchanted_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 4 },
+  { id: "battle_axe", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3, twoHanded: true },
+  { id: "enchanted_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 4, twoHanded: true },
   { id: "leather_armor", name: "", category: "armor", color: 0, description: "", weight: 8, defenseBonus: 1 },
   { id: "chainmail", name: "", category: "armor", color: 0, description: "", weight: 4, defenseBonus: 2 },
   { id: "plate_armor", name: "", category: "armor", color: 0, description: "", weight: 1, defenseBonus: 3 },
@@ -83,11 +85,14 @@ const BASE_TEMPLATES: ItemTemplate[] = [
   { id: "scroll_enchant", name: "", category: "scroll", color: 0, description: "", weight: 1, scrollEffect: "enchant" },
   // New weapons
   { id: "spear", name: "", category: "weapon", color: 0, description: "", weight: 5, attackBonus: 2 },
-  { id: "war_hammer", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3 },
+  { id: "war_hammer", name: "", category: "weapon", color: 0, description: "", weight: 2, attackBonus: 3, twoHanded: true },
   { id: "vampiric_blade", name: "", category: "weapon", color: 0, description: "", weight: 1, attackBonus: 2, lifesteal: true },
   // New armor
   { id: "thorned_armor", name: "", category: "armor", color: 0, description: "", weight: 2, defenseBonus: 1, thorns: 1 },
-  { id: "shield_armor", name: "", category: "armor", color: 0, description: "", weight: 3, defenseBonus: 1, blockChance: 0.25 },
+  // Shields (offhand)
+  { id: "buckler", name: "", category: "shield", color: 0, description: "", weight: 6, defenseBonus: 1, blockChance: 0.15 },
+  { id: "kite_shield", name: "", category: "shield", color: 0, description: "", weight: 3, defenseBonus: 2, blockChance: 0.25 },
+  { id: "tower_shield", name: "", category: "shield", color: 0, description: "", weight: 1, defenseBonus: 3, blockChance: 0.35 },
   // New rings
   { id: "ring_regen", name: "", category: "ring", color: 0, description: "", weight: 2, regenRate: 5 },
   { id: "ring_blink", name: "", category: "ring", color: 0, description: "", weight: 2, blinkChance: 0.1 },
@@ -110,13 +115,14 @@ export function getTemplate(id: string): ItemTemplate {
 
 export function getSlotForCategory(category: ItemCategory): EquipSlot | null {
   if (category === "weapon") return "weapon";
+  if (category === "shield") return "offhand";
   if (category === "armor") return "armor";
   if (category === "ring") return "ring1"; // default; equip logic picks actual slot
   return null;
 }
 
 export function isEquipSlot(category: ItemCategory): boolean {
-  return category === "weapon" || category === "armor" || category === "ring";
+  return category === "weapon" || category === "shield" || category === "armor" || category === "ring";
 }
 
 export interface EffectiveStats {
@@ -137,7 +143,7 @@ export function getEffectiveStats(
   let maxHp = player.maxHp;
   let fovRange = theme.baseFovRange;
 
-  for (const slot of [equipment.weapon, equipment.armor, equipment.ring1, equipment.ring2]) {
+  for (const slot of [equipment.weapon, equipment.offhand, equipment.armor, equipment.ring1, equipment.ring2]) {
     if (!slot) continue;
     const t = getTemplate(slot.templateId);
     attack += t.attackBonus ?? 0;

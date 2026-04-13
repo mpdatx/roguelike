@@ -186,7 +186,8 @@ export class InventoryPanel {
     // Equipment section
     html += `<div class="inv-section-title">Equipment</div>`;
     const slots: { slot: EquipSlot; label: string }[] = [
-      { slot: "weapon", label: "Weapon" },
+      { slot: "weapon", label: "Main Hand" },
+      { slot: "offhand", label: "Off Hand" },
       { slot: "armor", label: "Armor" },
       { slot: "ring1", label: "Ring 1" },
       { slot: "ring2", label: "Ring 2" },
@@ -230,14 +231,17 @@ export class InventoryPanel {
       const color = `#${t.color.toString(16).padStart(6, "0")}`;
       const equippable = isEquipSlot(t.category);
       const actionLabel = equippable ? "Equip" : "Use";
+      // Show "Offhand" button for 1-handed weapons when main hand is filled
+      const canOffhand = t.category === "weapon" && !t.twoHanded && inv.equipment.weapon !== null;
 
       html += `<div class="inv-item-row">
         <div class="inv-item-info">
           <div class="inv-item-name" style="color:${color}">${t.name}</div>
-          <div class="inv-item-desc">${t.description}</div>
+          <div class="inv-item-desc">${t.description}${t.twoHanded ? " (2H)" : ""}</div>
         </div>
         <div class="inv-actions">
           <button data-use="${i}">${actionLabel}</button>
+          ${canOffhand ? `<button data-offhand="${i}">Offhand</button>` : ""}
           ${equippable ? `<button data-salvage="${i}">Salvage</button>` : ""}
           <button data-drop="${i}">Drop</button>
         </div>
@@ -265,6 +269,16 @@ export class InventoryPanel {
           this.onMessage,
           this.getRng(),
         );
+        this.onChanged();
+        this.render();
+      });
+    });
+
+    this.content.querySelectorAll("[data-offhand]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt((btn as HTMLElement).dataset.offhand!);
+        this.inventory.equipToOffhand(idx, this.onMessage);
         this.onChanged();
         this.render();
       });
